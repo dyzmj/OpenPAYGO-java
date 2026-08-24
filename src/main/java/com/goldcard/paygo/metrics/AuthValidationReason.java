@@ -1,0 +1,13 @@
+package com.goldcard.paygo.metrics;
+
+public enum AuthValidationReason {
+    VALID,
+    MISSING_AUTH,
+    MISSING_SECRET_KEY,
+    UNKNOWN_AUTH_METHOD,
+    SIGNATURE_MISMATCH,
+    SIMPLE_AUTH_DISABLED,
+    MISSING_REPLAY_FIELD,
+    REQUEST_COUNT_REPLAY,
+    TIMESTAMP_REPLAY
+}

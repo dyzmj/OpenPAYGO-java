@@ -1,0 +1,6 @@
+{"method":"SIMPLE_AUTH","signature":"sa5330222fd02e2536"}
+{"method":"TIMESTAMP_AUTH","signature":"ta68c32b53466a897f"}
+{"method":"COUNTER_AUTH","signature":"cadaa7a2a30b80e79a"}
+{"method":"DATA_AUTH","signature":"da7374cb519278cb99"}
+{"method":"RECURSIVE_DATA_AUTH","signature":"ra19bf9a264df1c9b9"}
+{"method":"RESPONSE","signature":"da1579cb0d528c0775"}
