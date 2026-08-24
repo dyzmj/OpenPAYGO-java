@@ -10,10 +10,10 @@
     alt="GitHub Workflow Status"
     src="https://img.shields.io/github/actions/workflow/status/EnAccess/OpenPAYGO-js/.github/workflows/check.yaml"
   >
-  <a href="https://github.com/dyzmj/OpenPAYGO-java/blob/main/LICENSE" target="_blank">
+  <a href="https://github.com/dyzmj/OpenPAYGO-java/blob/master/LICENSE" target="_blank">
     <img
       alt="License"
-      src="https://img.shields.io/github/license/dyzmj/openpaygo-java"
+      src="https://img.shields.io/github/license/dyzmj/OpenPAYGO-java"
     >
   </a>
 </p>
