@@ -6,10 +6,12 @@
     alt="Project Status"
     src="https://img.shields.io/badge/Project%20Status-beta-orange"
   >
-  <img
-    alt="GitHub Workflow Status"
-    src="https://img.shields.io/github/actions/workflow/status/EnAccess/OpenPAYGO-js/.github/workflows/check.yaml"
-  >
+  <a href="https://github.com/dyzmj/OpenPAYGO-java/actions/workflows/maven-publish.yml" target="_blank">
+    <img
+      alt="Maven CI"
+      src="https://github.com/dyzmj/OpenPAYGO-java/actions/workflows/maven-publish.yml/badge.svg?branch=master"
+    >
+  </a>
   <a href="https://github.com/dyzmj/OpenPAYGO-java/blob/master/LICENSE" target="_blank">
     <img
       alt="License"
@@ -47,6 +49,29 @@ Build locally:
 mvn clean test
 mvn package
 ```
+
+## Automated Builds and Releases
+
+GitHub Actions runs all tests and uploads the binary and source JARs for pushes to `master`, pull
+requests, and manual workflow runs.
+
+To publish a release, update the version in `pom.xml` and in both README dependency examples, then
+commit the change and push a matching `vX.Y.Z` tag:
+
+```sh
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+The tag version must exactly match the Maven project version. A successful tagged build:
+
+- publishes `com.goldcard.paygo:openpaygo-java` to GitHub Packages;
+- creates a GitHub Release with generated release notes;
+- attaches the binary JAR, source JAR, POM, and `SHA256SUMS` file.
+
+The workflow uses the repository-provided `GITHUB_TOKEN`; no additional Maven publishing secret is
+required. The default `distributionManagement` remains configured for the private Maven server,
+while the `github` Maven profile selects GitHub Packages in CI.
 
 ## Generate a Token
 

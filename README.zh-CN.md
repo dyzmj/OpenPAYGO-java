@@ -6,10 +6,12 @@
     alt="Project Status"
     src="https://img.shields.io/badge/Project%20Status-beta-orange"
   >
-  <img
-    alt="GitHub Workflow Status"
-    src="https://img.shields.io/github/actions/workflow/status/EnAccess/OpenPAYGO-js/.github/workflows/check.yaml"
-  >
+  <a href="https://github.com/dyzmj/OpenPAYGO-java/actions/workflows/maven-publish.yml" target="_blank">
+    <img
+      alt="Maven CI"
+      src="https://github.com/dyzmj/OpenPAYGO-java/actions/workflows/maven-publish.yml/badge.svg?branch=master"
+    >
+  </a>
   <a href="https://github.com/dyzmj/OpenPAYGO-java/blob/master/LICENSE" target="_blank">
     <img
       alt="License"
@@ -47,6 +49,29 @@ OpenPAYGO Token v2.3 和 OpenPAYGO Metrics v1.0-rc1 的 Java 8 类库实现。
 mvn clean test
 mvn package
 ```
+
+## 自动构建与发布
+
+代码推送到 `master`、提交 Pull Request 或手动运行工作流时，GitHub Actions 会执行全部测试，
+并保存主 JAR 和源码 JAR。
+
+发布新版本时，先同步修改 `pom.xml` 以及中英文 README 依赖示例中的版本号，提交后推送与版本号
+一致的 `vX.Y.Z` 标签：
+
+```sh
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+标签版本必须与 Maven 项目版本完全一致。标签构建成功后将：
+
+- 把 `com.goldcard.paygo:openpaygo-java` 发布到 GitHub Packages；
+- 创建带自动生成说明的 GitHub Release；
+- 上传主 JAR、源码 JAR、POM 和 `SHA256SUMS` 校验文件。
+
+工作流使用仓库自动提供的 `GITHUB_TOKEN`，不需要额外配置 Maven 发布密钥。默认
+`distributionManagement` 仍指向 Maven 私服，CI 通过 `github` Maven Profile 切换到 GitHub
+Packages。
 
 ## 生成 Token
 

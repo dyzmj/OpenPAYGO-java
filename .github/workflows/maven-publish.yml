@@ -1,34 +1,141 @@
-# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
-# For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#apache-maven-with-a-settings-path
-
-name: Maven Package
+name: Maven CI and Release
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
 
 jobs:
   build:
-
+    if: github.ref_type != 'tag'
     runs-on: ubuntu-latest
     permissions:
       contents: read
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Test and package
+        run: mvn --batch-mode --no-transfer-progress clean verify
+
+      - name: Prepare build artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_id="$(mvn --batch-mode --no-transfer-progress help:evaluate \
+            -Dexpression=project.artifactId -q -DforceStdout)"
+          project_version="$(mvn --batch-mode --no-transfer-progress help:evaluate \
+            -Dexpression=project.version -q -DforceStdout)"
+          mkdir -p dist
+          cp "target/${artifact_id}-${project_version}.jar" dist/
+          cp "target/${artifact_id}-${project_version}-sources.jar" dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openpaygo-java-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
       packages: write
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 8
-      uses: actions/setup-java@v4
-      with:
-        java-version: '8'
-        distribution: 'temurin'
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Build with Maven
-      run: mvn -B package --file pom.xml
+      - name: Set up JDK 17 and GitHub Packages credentials
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          server-id: github
+          server-username: GITHUB_ACTOR
+          server-password: GITHUB_TOKEN
 
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+      - name: Validate release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must use the form v1.2.3" >&2
+            exit 1
+          fi
+          project_version="$(mvn --batch-mode --no-transfer-progress help:evaluate \
+            -Dexpression=project.version -q -DforceStdout)"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [[ "${project_version}" != "${tag_version}" ]]; then
+            echo "POM version ${project_version} does not match tag ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+
+      - name: Test, package, and publish to GitHub Packages
+        run: mvn --batch-mode --no-transfer-progress -Pgithub clean deploy
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifact_id="$(mvn --batch-mode --no-transfer-progress help:evaluate \
+            -Dexpression=project.artifactId -q -DforceStdout)"
+          project_version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist
+          cp "target/${artifact_id}-${project_version}.jar" dist/
+          cp "target/${artifact_id}-${project_version}-sources.jar" dist/
+          cp pom.xml "dist/${artifact_id}-${project_version}.pom"
+          cd dist
+          sha256sum "${artifact_id}-${project_version}.jar" \
+            "${artifact_id}-${project_version}-sources.jar" \
+            "${artifact_id}-${project_version}.pom" > SHA256SUMS
+
+      - name: Upload release build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openpaygo-java-${{ github.ref_name }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
+          else
+            gh release create "${GITHUB_REF_NAME}" dist/* \
+              --verify-tag \
+              --generate-notes \
+              --title "OpenPAYGO Java ${GITHUB_REF_NAME#v}"
+          fi
